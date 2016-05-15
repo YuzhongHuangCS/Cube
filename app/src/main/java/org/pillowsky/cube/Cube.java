@@ -122,10 +122,10 @@ public class Cube {
         colorBuffer.position(0);
 
         // prepare shaders and OpenGL program
-        int vertexShader = MyGLRenderer.loadShader(
+        int vertexShader = CubeRenderer.loadShader(
                 GLES20.GL_VERTEX_SHADER,
                 "simple.vert");
-        int fragmentShader = MyGLRenderer.loadShader(
+        int fragmentShader = CubeRenderer.loadShader(
                 GLES20.GL_FRAGMENT_SHADER,
                 "simple.frag");
 
@@ -168,11 +168,11 @@ public class Cube {
 
         // get handle to shape's transformation matrix
         mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
-        MyGLRenderer.checkGlError("glGetUniformLocation");
+        CubeRenderer.checkGlError("glGetUniformLocation");
 
         // Apply the projection and view transformation
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
-        MyGLRenderer.checkGlError("glUniformMatrix4fv");
+        CubeRenderer.checkGlError("glUniformMatrix4fv");
 
         // Draw the square
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount);

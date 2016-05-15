@@ -17,26 +17,25 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener {
+public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener {
 
-    private static final String TAG = "MyGLRenderer";
+    private static final String TAG = "CubeRenderer";
     private static AssetManager mAssetManager;
     private final SensorManager mSensorManager;
-    private final Sensor mRotationVector;
+    private final Sensor mRotationVectorSensor;
     private Cube mCube;
 
     // mMVPMatrix is an abbreviation for "Model View Projection Matrix"
     private final float[] mMVPMatrix = new float[16];
-    private final float[] mMVPRMatrix = new float[16];
     private final float[] mProjectionMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
     private final float[] mRotationMatrix = new float[16];
+    private final float[] mOrientation = new float[3];
 
-    public MyGLRenderer(Context context) {
+    public CubeRenderer(Context context) {
         mAssetManager = context.getAssets();
         mSensorManager = (SensorManager)context.getSystemService(context.SENSOR_SERVICE);
-        mRotationVector = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-
+        mRotationVectorSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
     }
 
     @Override
@@ -46,26 +45,17 @@ public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         GLES20.glDepthFunc(GLES20.GL_LESS);
         mCube = new Cube();
-        mSensorManager.registerListener(this, mRotationVector, SensorManager.SENSOR_DELAY_FASTEST);
+
     }
 
     @Override
     public void onDrawFrame(GL10 unused) {
-        // Draw background color
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-
-        // Set the camera position (View matrix)
         Matrix.setLookAtM(mViewMatrix, 0, 0, 0, 10, 0, 0, 0, 0, 1, 0);
-
-        // Calculate the projection and view transformation
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-
-        //Matrix.multiplyMM(mMVPRMatrix, 0, mMVPMatrix, 0, mRotationMatrix, 0);
-        float[] values = new float[3];
-        SensorManager.getOrientation(mRotationMatrix, values);
-        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(values[0]), 0, 0, -1);
-        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(values[1]), -1, 0, 0);
-        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(values[2]), 0, 1, 0);
+        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(mOrientation[0]), 0, 0, -1);
+        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(mOrientation[1]), -1, 0, 0);
+        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(mOrientation[2]), 0, 1, 0);
         mCube.draw(mMVPMatrix);
     }
 
@@ -91,7 +81,16 @@ public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
             SensorManager.getRotationMatrixFromVector(mRotationMatrix , event.values);
+            SensorManager.getOrientation(mRotationMatrix, mOrientation);
         }
+    }
+
+    public void onResume() {
+        mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
+    }
+
+    public void onPause() {
+        mSensorManager.unregisterListener(this);
     }
 
     public static int loadShader(int type, String filename){
@@ -117,4 +116,5 @@ public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener
             throw new RuntimeException(glOperation + ": glError " + error);
         }
     }
+
 }
