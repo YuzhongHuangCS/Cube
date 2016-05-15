@@ -16,6 +16,9 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 
 public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener {
 
@@ -25,7 +28,6 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
     private final Sensor mRotationVectorSensor;
     private Cube mCube;
 
-    // mMVPMatrix is an abbreviation for "Model View Projection Matrix"
     private final float[] mMVPMatrix = new float[16];
     private final float[] mProjectionMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
@@ -40,7 +42,6 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
 
     @Override
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
-        // Set the background frame color
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         GLES20.glDepthFunc(GLES20.GL_LESS);
@@ -61,14 +62,8 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
 
     @Override
     public void onSurfaceChanged(GL10 unused, int width, int height) {
-        // Adjust the viewport based on geometry changes,
-        // such as screen rotation
         GLES20.glViewport(0, 0, width, height);
-
         float ratio = (float) width / height;
-
-        // this projection matrix is applied to object coordinates
-        // in the onDrawFrame() method
         Matrix.perspectiveM(mProjectionMatrix, 0, 45, ratio, 0.1f, 100);
     }
 
@@ -93,7 +88,7 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
         mSensorManager.unregisterListener(this);
     }
 
-    public static int loadShader(int type, String filename){
+    public int loadShader(int type, String filename){
         try {
             InputStream stream = mAssetManager.open(filename);
             byte bytes[] = new byte[stream.available()];
@@ -109,7 +104,7 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
         }
     }
 
-    public static void checkGlError(String glOperation) {
+    public void checkGlError(String glOperation) {
         int error;
         if ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
             Log.e(TAG, glOperation + ": glError " + error);
@@ -117,4 +112,86 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
         }
     }
 
+    class Cube {
+        private final FloatBuffer vertexBuffer;
+        private final FloatBuffer colorBuffer;
+        private final ByteBuffer indexBuffer;
+        private final int program;
+        private int positionHandle;
+        private int colorHandle;
+        private int MVPMatrixHandle;
+
+        public Cube() {
+            final float vertices[] = {
+                    -1, -1, -1,		 1, -1, -1,
+                    1,  1, -1,	    -1,  1, -1,
+                    -1, -1,  1,      1, -1,  1,
+                    1,  1,  1,     -1,  1,  1,
+            };
+            final float colors[] = {
+                    0,  0,  0,  1,  0,  0,
+                    1,  1,  0,  0,  1,  0,
+                    0,  0,  1,  1,  0,  1,
+                    1,  1,  1,  0,  1,  1,
+            };
+            final byte indices[] = {
+                    0, 4, 5,    0, 5, 1,
+                    1, 5, 6,    1, 6, 2,
+                    2, 6, 7,    2, 7, 3,
+                    3, 7, 4,    3, 4, 0,
+                    4, 7, 6,    4, 6, 5,
+                    3, 0, 1,    3, 1, 2
+            };
+
+            ByteBuffer bb = ByteBuffer.allocateDirect(vertices.length * 4);
+            bb.order(ByteOrder.nativeOrder());
+            vertexBuffer = bb.asFloatBuffer();
+            vertexBuffer.put(vertices);
+            vertexBuffer.position(0);
+
+            bb = ByteBuffer.allocateDirect(colors.length * 4);
+            bb.order(ByteOrder.nativeOrder());
+            colorBuffer = bb.asFloatBuffer();
+            colorBuffer.put(colors);
+            colorBuffer.position(0);
+
+            indexBuffer = ByteBuffer.allocateDirect(indices.length);
+            indexBuffer.put(indices);
+            indexBuffer.position(0);
+
+            int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, "simple.vert");
+            int fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, "simple.frag");
+
+            program = GLES20.glCreateProgram();
+            GLES20.glAttachShader(program, vertexShader);
+            GLES20.glAttachShader(program, fragmentShader);
+            GLES20.glLinkProgram(program);
+
+            positionHandle = GLES20.glGetAttribLocation(program, "vPosition");
+            colorHandle = GLES20.glGetAttribLocation(program, "vColor");
+            MVPMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix");
+        }
+
+        public void draw(float[] mvpMatrix) {
+            GLES20.glUseProgram(program);
+
+            GLES20.glEnableVertexAttribArray(positionHandle);
+            GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 3 * 4, vertexBuffer);
+
+            GLES20.glEnableVertexAttribArray(colorHandle);
+            GLES20.glVertexAttribPointer(colorHandle, 3, GLES20.GL_FLOAT, false, 3 * 4, colorBuffer);
+
+            checkGlError("glGetUniformLocation");
+
+            GLES20.glUniformMatrix4fv(MVPMatrixHandle, 1, false, mvpMatrix, 0);
+            checkGlError("glUniformMatrix4fv");
+
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, 36, GLES20.GL_UNSIGNED_BYTE, indexBuffer);
+
+            GLES20.glDisableVertexAttribArray(positionHandle);
+            GLES20.glDisableVertexAttribArray(colorHandle);
+            GLES20.glUseProgram(0);
+        }
+
+    }
 }
