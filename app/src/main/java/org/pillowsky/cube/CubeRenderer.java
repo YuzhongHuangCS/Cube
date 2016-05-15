@@ -23,21 +23,21 @@ import java.nio.FloatBuffer;
 public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener {
 
     private static final String TAG = "CubeRenderer";
-    private static AssetManager mAssetManager;
-    private final SensorManager mSensorManager;
-    private final Sensor mRotationVectorSensor;
-    private Cube mCube;
+    private static AssetManager assetManager;
+    private final SensorManager sensorManager;
+    private final Sensor rotationVectorSensor;
+    private Cube cube;
 
-    private final float[] mMVPMatrix = new float[16];
-    private final float[] mProjectionMatrix = new float[16];
-    private final float[] mViewMatrix = new float[16];
-    private final float[] mRotationMatrix = new float[16];
-    private final float[] mOrientation = new float[3];
+    private final float[] MVPMatrix = new float[16];
+    private final float[] projectionMatrix = new float[16];
+    private final float[] viewMatrix = new float[16];
+    private final float[] rotationMatrix = new float[16];
+    private final float[] orientation = new float[3];
 
     public CubeRenderer(Context context) {
-        mAssetManager = context.getAssets();
-        mSensorManager = (SensorManager)context.getSystemService(context.SENSOR_SERVICE);
-        mRotationVectorSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        assetManager = context.getAssets();
+        sensorManager = (SensorManager)context.getSystemService(context.SENSOR_SERVICE);
+        rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
     }
 
     @Override
@@ -45,26 +45,25 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         GLES20.glDepthFunc(GLES20.GL_LESS);
-        mCube = new Cube();
-
+        cube = new Cube();
     }
 
     @Override
     public void onDrawFrame(GL10 unused) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-        Matrix.setLookAtM(mViewMatrix, 0, 0, 0, 10, 0, 0, 0, 0, 1, 0);
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(mOrientation[0]), 0, 0, -1);
-        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(mOrientation[1]), -1, 0, 0);
-        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(mOrientation[2]), 0, 1, 0);
-        mCube.draw(mMVPMatrix);
+        Matrix.setLookAtM(viewMatrix, 0, 0, 0, 10, 0, 0, 0, 0, 1, 0);
+        Matrix.multiplyMM(MVPMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
+        Matrix.rotateM(MVPMatrix, 0, (float) Math.toDegrees(orientation[0]), 0, 0, -1);
+        Matrix.rotateM(MVPMatrix, 0, (float) Math.toDegrees(orientation[1]), -1, 0, 0);
+        Matrix.rotateM(MVPMatrix, 0, (float) Math.toDegrees(orientation[2]), 0, 1, 0);
+        cube.draw(MVPMatrix);
     }
 
     @Override
     public void onSurfaceChanged(GL10 unused, int width, int height) {
         GLES20.glViewport(0, 0, width, height);
         float ratio = (float) width / height;
-        Matrix.perspectiveM(mProjectionMatrix, 0, 45, ratio, 0.1f, 100);
+        Matrix.perspectiveM(projectionMatrix, 0, 45, ratio, 0.1f, 100);
     }
 
     @Override
@@ -75,25 +74,26 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
-            SensorManager.getRotationMatrixFromVector(mRotationMatrix , event.values);
-            SensorManager.getOrientation(mRotationMatrix, mOrientation);
+            SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
+            SensorManager.getOrientation(rotationMatrix, orientation);
         }
     }
 
     public void onResume() {
-        mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
+        sensorManager.registerListener(this, rotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
     public void onPause() {
-        mSensorManager.unregisterListener(this);
+        sensorManager.unregisterListener(this);
     }
 
     public int loadShader(int type, String filename){
         try {
-            InputStream stream = mAssetManager.open(filename);
+            InputStream stream = assetManager.open(filename);
             byte bytes[] = new byte[stream.available()];
             stream.read(bytes);
             String code = new String(bytes, "UTF-8");
+
             int shader = GLES20.glCreateShader(type);
             GLES20.glShaderSource(shader, code);
             GLES20.glCompileShader(shader);
@@ -170,6 +170,7 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
             positionHandle = GLES20.glGetAttribLocation(program, "vPosition");
             colorHandle = GLES20.glGetAttribLocation(program, "vColor");
             MVPMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix");
+            checkGlError("glGetUniformLocation");
         }
 
         public void draw(float[] mvpMatrix) {
@@ -180,8 +181,6 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
 
             GLES20.glEnableVertexAttribArray(colorHandle);
             GLES20.glVertexAttribPointer(colorHandle, 3, GLES20.GL_FLOAT, false, 3 * 4, colorBuffer);
-
-            checkGlError("glGetUniformLocation");
 
             GLES20.glUniformMatrix4fv(MVPMatrixHandle, 1, false, mvpMatrix, 0);
             checkGlError("glUniformMatrix4fv");

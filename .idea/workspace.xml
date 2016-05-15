@@ -10,7 +10,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ef083619-b9ce-4c0a-b6bc-187a3674e6f8" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/app/src/main/java/org/pillowsky/cube/Cube.java" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/app/src/main/java/org/pillowsky/cube/CubeRenderer.java" afterPath="$PROJECT_DIR$/app/src/main/java/org/pillowsky/cube/CubeRenderer.java" />
     </list>
@@ -37,7 +36,7 @@
         <entry file="file://$PROJECT_DIR$/app/src/main/java/org/pillowsky/cube/MainActivity.java">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="9" column="37" selection-start-line="9" selection-start-column="25" selection-end-line="9" selection-end-column="37" />
+              <caret line="27" column="30" selection-start-line="27" selection-start-column="22" selection-end-line="27" selection-end-column="30" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -48,12 +47,12 @@
       <file leaf-file-name="CubeRenderer.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/org/pillowsky/cube/CubeRenderer.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.6236559">
-              <caret line="119" column="22" selection-start-line="119" selection-start-column="22" selection-end-line="119" selection-end-column="22" />
+            <state vertical-scroll-proportion="3.7096775">
+              <caret line="193" column="0" selection-start-line="193" selection-start-column="0" selection-end-line="193" selection-end-column="0" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#3217#3218#0" expanded="true" />
-                <element signature="e#3272#3273#0" expanded="true" />
+                <element signature="e#3183#3184#0" expanded="true" />
+                <element signature="e#3237#3238#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -2207,9 +2206,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/../../AppData/Local/Android/sdk/sources/android-23/java/lang/String.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.7878788">
+          <caret line="172" column="11" selection-start-line="172" selection-start-column="11" selection-end-line="172" selection-end-column="11" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/assets/simple.frag">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.02688172">
+        <state vertical-scroll-proportion="0.0">
           <caret line="1" column="0" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
           <folding />
         </state>
@@ -2217,7 +2224,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/assets/simple.vert">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.18817204">
+        <state vertical-scroll-proportion="0.35353535">
           <caret line="7" column="40" selection-start-line="7" selection-start-column="31" selection-end-line="7" selection-end-column="40" />
           <folding />
         </state>
@@ -2226,7 +2233,7 @@
     <entry file="file://$PROJECT_DIR$/app/src/main/java/org/pillowsky/cube/MainActivity.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="9" column="37" selection-start-line="9" selection-start-column="25" selection-end-line="9" selection-end-column="37" />
+          <caret line="27" column="30" selection-start-line="27" selection-start-column="22" selection-end-line="27" selection-end-column="30" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
@@ -2235,12 +2242,12 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/org/pillowsky/cube/CubeRenderer.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.6236559">
-          <caret line="119" column="22" selection-start-line="119" selection-start-column="22" selection-end-line="119" selection-end-column="22" />
+        <state vertical-scroll-proportion="3.7096775">
+          <caret line="193" column="0" selection-start-line="193" selection-start-column="0" selection-end-line="193" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#3217#3218#0" expanded="true" />
-            <element signature="e#3272#3273#0" expanded="true" />
+            <element signature="e#3183#3184#0" expanded="true" />
+            <element signature="e#3237#3238#0" expanded="true" />
           </folding>
         </state>
       </provider>
