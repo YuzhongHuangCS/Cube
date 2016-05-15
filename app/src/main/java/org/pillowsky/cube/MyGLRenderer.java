@@ -12,7 +12,6 @@ import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.IOException;
@@ -28,11 +27,10 @@ public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener
 
     // mMVPMatrix is an abbreviation for "Model View Projection Matrix"
     private final float[] mMVPMatrix = new float[16];
+    private final float[] mMVPRMatrix = new float[16];
     private final float[] mProjectionMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
     private final float[] mRotationMatrix = new float[16];
-    private float mAngleX;
-    private float mAngleY;
 
     public MyGLRenderer(Context context) {
         mAssetManager = context.getAssets();
@@ -57,20 +55,17 @@ public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
         // Set the camera position (View matrix)
-        Matrix.setLookAtM(mViewMatrix, 0, 0, 5, 5, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+        Matrix.setLookAtM(mViewMatrix, 0, 0, 0, 10, 0, 0, 0, 0, 1, 0);
 
         // Calculate the projection and view transformation
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
 
-        // Use the following code to generate constant rotation.
-        // Leave this code out when using TouchEvents.
-        long time = SystemClock.uptimeMillis() % 4000L;
-        float angle = 0.02f * ((int) time);
-
-        Matrix.rotateM(mMVPMatrix, 0, mAngleX, 0, 1, -1);
-        Matrix.rotateM(mMVPMatrix, 0, mAngleY, 1, 0, 0);
-        Matrix.rotateM(mMVPMatrix, 0, angle, 0, 0, 1);
-
+        //Matrix.multiplyMM(mMVPRMatrix, 0, mMVPMatrix, 0, mRotationMatrix, 0);
+        float[] values = new float[3];
+        SensorManager.getOrientation(mRotationMatrix, values);
+        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(values[0]), 0, 0, -1);
+        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(values[1]), -1, 0, 0);
+        Matrix.rotateM(mMVPMatrix, 0, (float) Math.toDegrees(values[2]), 0, 1, 0);
         mCube.draw(mMVPMatrix);
     }
 
@@ -98,16 +93,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener
             SensorManager.getRotationMatrixFromVector(mRotationMatrix , event.values);
         }
     }
-    /**
-     * Utility method for compiling a OpenGL shader.
-     *
-     * <p><strong>Note:</strong> When developing shaders, use the checkGlError()
-     * method to debug shader coding errors.</p>
-     *
-     * @param type - Vertex or fragment shader type.
-     * @param filename - String containing the shader code.
-     * @return - Returns an id for the shader.
-     */
+
     public static int loadShader(int type, String filename){
         try {
             InputStream stream = mAssetManager.open(filename);
@@ -124,34 +110,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer, SensorEventListener
         }
     }
 
-    /**
-     * Utility method for debugging OpenGL calls. Provide the name of the call
-     * just after making it:
-     *
-     * <pre>
-     * mColorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
-     * MyGLRenderer.checkGlError("glGetUniformLocation");</pre>
-     *
-     * If the operation is not successful, the check throws an error.
-     *
-     * @param glOperation - Name of the OpenGL call to check.
-     */
     public static void checkGlError(String glOperation) {
         int error;
         if ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
             Log.e(TAG, glOperation + ": glError " + error);
             throw new RuntimeException(glOperation + ": glError " + error);
         }
-    }
-
-    /**
-     * Sets the rotation angle of the triangle shape (mTriangle).
-     */
-    public void addAngleX(float angle) {
-        mAngleX += angle;
-    }
-
-    public void addAngleY(float angle) {
-        mAngleY += angle;
     }
 }
