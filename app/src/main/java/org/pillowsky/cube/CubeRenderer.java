@@ -5,12 +5,15 @@ import javax.microedition.khronos.opengles.GL10;
 
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.util.Log;
 
@@ -51,7 +54,7 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
     @Override
     public void onDrawFrame(GL10 unused) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-        Matrix.setLookAtM(viewMatrix, 0, 0, 0, 10, 0, 0, 0, 0, 1, 0);
+        Matrix.setLookAtM(viewMatrix, 0, 0, 0, 0, 0, 0, -10, 0, 1, 0);
         Matrix.multiplyMM(MVPMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
         Matrix.rotateM(MVPMatrix, 0, (float) Math.toDegrees(orientation[0]), 0, 0, -1);
         Matrix.rotateM(MVPMatrix, 0, (float) Math.toDegrees(orientation[1]), -1, 0, 0);
@@ -63,7 +66,7 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
     public void onSurfaceChanged(GL10 unused, int width, int height) {
         GLES20.glViewport(0, 0, width, height);
         float ratio = (float) width / height;
-        Matrix.perspectiveM(projectionMatrix, 0, 45, ratio, 0.1f, 100);
+        Matrix.perspectiveM(projectionMatrix, 0, 90, ratio, 0.1f, 100);
     }
 
     @Override
@@ -87,9 +90,18 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
         sensorManager.unregisterListener(this);
     }
 
-    public int loadShader(int type, String filename){
-        try {
-            InputStream stream = assetManager.open(filename);
+    public Bitmap loadBitmap(String path) {
+        try (InputStream stream = assetManager.open(path)) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inScaled = false;
+            return BitmapFactory.decodeStream(stream, null, options);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public int buildShader(String path, int type){
+        try (InputStream stream = assetManager.open(path)) {
             byte bytes[] = new byte[stream.available()];
             stream.read(bytes);
             String code = new String(bytes, "UTF-8");
@@ -98,28 +110,49 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
             GLES20.glShaderSource(shader, code);
             GLES20.glCompileShader(shader);
 
+            int[] result = new int[1];
+            GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, result, 0);
+            if (result[0] != GLES20.GL_TRUE) {
+                throw new RuntimeException("Build shader failed: " + GLES20.glGetShaderInfoLog(shader));
+            }
+
             return shader;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    public int buildProgram(String[] pathArray, int[] typeArray) {
+        int program = GLES20.glCreateProgram();
+        for (int i = 0; i < Math.min(pathArray.length, typeArray.length); i++) {
+            GLES20.glAttachShader(program, buildShader(pathArray[i], typeArray[i]));
+        }
+        GLES20.glLinkProgram(program);
+
+        int[] result = new int[1];
+        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, result, 0);
+        if (result[0] != GLES20.GL_TRUE) {
+            throw new RuntimeException("Build program failed: " + GLES20.glGetProgramInfoLog(program));
+        }
+
+        return program;
+    }
+
     public void checkGlError(String glOperation) {
-        int error;
-        if ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
-            Log.e(TAG, glOperation + ": glError " + error);
-            throw new RuntimeException(glOperation + ": glError " + error);
+        int error = GLES20.glGetError();
+        if (error != GLES20.GL_NO_ERROR) {
+            throw new RuntimeException(glOperation + ": glError " + error + " " + GLUtils.getEGLErrorString(error));
         }
     }
 
     class Cube {
         private final FloatBuffer vertexBuffer;
-        private final FloatBuffer colorBuffer;
         private final ByteBuffer indexBuffer;
         private final int program;
         private int positionHandle;
-        private int colorHandle;
         private int MVPMatrixHandle;
+        private int skyboxHandle;
+        private final int[] skyboxTexture = new int[1];
 
         public Cube() {
             final float vertices[] = {
@@ -127,12 +160,6 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
                     1,  1, -1,	    -1,  1, -1,
                     -1, -1,  1,      1, -1,  1,
                     1,  1,  1,     -1,  1,  1,
-            };
-            final float colors[] = {
-                    0,  0,  0,  1,  0,  0,
-                    1,  1,  0,  0,  1,  0,
-                    0,  0,  1,  1,  0,  1,
-                    1,  1,  1,  0,  1,  1,
             };
             final byte indices[] = {
                     0, 4, 5,    0, 5, 1,
@@ -143,33 +170,47 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
                     3, 0, 1,    3, 1, 2
             };
 
+            final String faces[] = {
+                    "skybox/left.jpg",
+                    "skybox/right.jpg",
+                    "skybox/top.jpg",
+                    "skybox/bottom.jpg",
+                    "skybox/front.jpg",
+                    "skybox/back.jpg"
+            };
+
             ByteBuffer bb = ByteBuffer.allocateDirect(vertices.length * 4);
             bb.order(ByteOrder.nativeOrder());
             vertexBuffer = bb.asFloatBuffer();
             vertexBuffer.put(vertices);
             vertexBuffer.position(0);
 
-            bb = ByteBuffer.allocateDirect(colors.length * 4);
-            bb.order(ByteOrder.nativeOrder());
-            colorBuffer = bb.asFloatBuffer();
-            colorBuffer.put(colors);
-            colorBuffer.position(0);
-
             indexBuffer = ByteBuffer.allocateDirect(indices.length);
             indexBuffer.put(indices);
             indexBuffer.position(0);
 
-            int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, "simple.vert");
-            int fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, "simple.frag");
+            GLES20.glGenTextures(1, skyboxTexture, 0);
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_CUBE_MAP, skyboxTexture[0]);
 
-            program = GLES20.glCreateProgram();
-            GLES20.glAttachShader(program, vertexShader);
-            GLES20.glAttachShader(program, fragmentShader);
-            GLES20.glLinkProgram(program);
+            for (int i = 0; i < 6; i++) {
+                Bitmap bitmap = loadBitmap(faces[i]);
+                GLUtils.texImage2D(GLES20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, bitmap, 0);
+                bitmap.recycle();
+            }
+
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_CUBE_MAP, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_CUBE_MAP, 0);
+
+            program = buildProgram(new String[] {"shader/simple.vert", "shader/simple.frag"}, new int[] {GLES20.GL_VERTEX_SHADER, GLES20.GL_FRAGMENT_SHADER});
+            checkGlError("program");
 
             positionHandle = GLES20.glGetAttribLocation(program, "vPosition");
-            colorHandle = GLES20.glGetAttribLocation(program, "vColor");
             MVPMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix");
+            skyboxHandle = GLES20.glGetUniformLocation(program, "uSkybox");
             checkGlError("glGetUniformLocation");
         }
 
@@ -179,16 +220,15 @@ public class CubeRenderer implements GLSurfaceView.Renderer, SensorEventListener
             GLES20.glEnableVertexAttribArray(positionHandle);
             GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 3 * 4, vertexBuffer);
 
-            GLES20.glEnableVertexAttribArray(colorHandle);
-            GLES20.glVertexAttribPointer(colorHandle, 3, GLES20.GL_FLOAT, false, 3 * 4, colorBuffer);
-
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_CUBE_MAP, skyboxTexture[0]);
             GLES20.glUniformMatrix4fv(MVPMatrixHandle, 1, false, mvpMatrix, 0);
-            checkGlError("glUniformMatrix4fv");
+            GLES20.glUniform1i(skyboxHandle, 0);
+            checkGlError("glUniform");
 
             GLES20.glDrawElements(GLES20.GL_TRIANGLES, 36, GLES20.GL_UNSIGNED_BYTE, indexBuffer);
 
             GLES20.glDisableVertexAttribArray(positionHandle);
-            GLES20.glDisableVertexAttribArray(colorHandle);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_CUBE_MAP, 0);
             GLES20.glUseProgram(0);
         }
 
